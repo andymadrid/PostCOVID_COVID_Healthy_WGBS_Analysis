@@ -1,0 +1,10 @@
+# PC plot of samples
+library(ggfortify)
+meth.mat <- bsseq::getMeth(bs.filtered,type="raw")
+pc <- prcomp(t(meth.mat))
+metaData <- as.data.frame(rep(c("COVID","H","PostCOVID"),c(15,15,15)))
+colnames(metaData) <- "Group"
+metaData$color <- rep(c("goldenrod","firebrick3","mediumblue"),c(15,15,15))
+pdf("pca.c.h.pci.pdf")
+autoplot(pc,data=metaData,label=T,shape=F,label.colour=metaData$color) + theme_classic() + theme(legend.position="none")
+dev.off()
