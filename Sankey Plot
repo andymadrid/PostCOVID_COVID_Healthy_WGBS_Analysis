@@ -1,0 +1,38 @@
+# Make a Sankey Plot
+#col = as.vector(wes_palette("Zissou1", 9, type = "continuous"))
+col = as.vector(wes_palette("Darjeeling1", 9, type = "continuous"))
+#col = as.vector(wes_palette("FantasticFox1", 9, type = "continuous"))
+#col = as.vector(wes_palette("Royal2", 9, type = "continuous"))
+makeSankey <- function(x,y) {
+library(networkD3)
+library(dplyr)
+toUse <- x
+totalNum <- nrow(toUse)
+name1 <- paste0("Differentially Methylated Regions (DMRs) (N = ",totalNum,")")
+name2 <- paste0("Promoter (<=1kb) (30%)")
+name3 <- paste0("Promoter (1-2kb) (16%)")
+name4 <- paste0("3' UTR (5%)")
+name5 <- paste0("1st Exon (1%)")
+name6 <- paste0("Other Exon (5%)")
+name7 <- paste0("1st Intron (11%)")
+name8 <- paste0("Other Intron (18%)")
+name9 <- paste0("Distal Intergenic (14%)")
+links <- data.frame(
+source=c(name1,name1,name1,name1,name1,name1,name1,name1),
+target=c(name2,name3,name4,name5,name6,name7,name8,name9),
+value=c(30,16,5,1,5,11,18,14))
+nodes <- data.frame(
+name=c(as.character(links$source), 
+as.character(links$target)) %>% unique()
+)
+# set up groups for connections
+links$group <- as.factor(c("type_a","type_b","type_c","type_d","type_e","type_f","type_g","type_h"))
+# set up groups for nodes
+nodes$group <- as.factor(c("group1"))
+# set up color scheme
+my_color <- 'd3.scaleOrdinal() .domain(["type_a","type_b","type_c","type_d","type_e","type_f","type_g","type_h","group1"]) .range(["#D53E4F","#F46D43","#FDAE61","#FEE08B","#E6F598","#ABDDA4","#66C2A5","#3288BD","grey"])'
+links$IDsource <- match(links$source, nodes$name)-1 
+links$IDtarget <- match(links$target, nodes$name)-1
+sankeyNetwork(Links = links, Nodes = nodes, Source = "IDsource", Target = "IDtarget",Value = "value", NodeID = "name",colourScale=my_color, LinkGroup="group", NodeGroup="group",fontSize=17,sinksRight=FALSE)
+}
+makeSankey(dmrs)
