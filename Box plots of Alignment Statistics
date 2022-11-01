@@ -1,0 +1,7 @@
+# Make a box plot of alignment values
+x <- read.table("alignmentStats.txt",header=T)
+x$Group <- factor(x$Group,levels=unique(x$Group))
+p <- ggplot(x, aes(x=Group, y=Alignment,fill=Group)) + geom_boxplot() + scale_fill_manual(values=c("firebrick3","goldenrod","mediumblue")) + geom_dotplot(binaxis='y', stackdir='center', dotsize=.5,fill="black") + theme(text=element_text(size=20)) + ylab(label="Alignment (%)") + xlab(label="") + theme(legend.position="none")
+pdf("boxAlign.pdf")
+p
+dev.off()
