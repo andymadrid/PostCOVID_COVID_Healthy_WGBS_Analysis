@@ -1,0 +1,35 @@
+# Make a Circos plot
+library(RCircos)
+sigRegions <- dmrs
+peaks <- annotatePeak(sigRegions,tssRegion=c(-2000,2000),TxDb=txdb,annoDb="org.Hs.eg.db")
+peaks
+peaks <- as.data.frame(peaks)
+sigRegions <- as.data.frame(sigRegions)
+dmrs <- cbind(sigRegions,peaks$distanceToTSS,peaks$ENSEMBL,peaks$annotation,peaks$SYMBOL,peaks$GENENAME)
+names(dmrs) <- c(names(dmrs)[1:14],"distanceToTSS","ENSEMBL","annotation","SYMBOL","GENENAME")
+hyper <- dmrs[which(dmrs$areaStat>0 & dmrs$annotation != "Distal Intergenic"),1:2]
+hypo <- dmrs[which(dmrs$areaStat<0 & dmrs$annotation != "Distal Intergenic"),1:2]
+colnames(hyper) <- c("Chromosome","chromStart")
+hyper$chromEnd <- hyper$chromStart+10000
+colnames(hypo) <- c("Chromosome","chromStart")
+hypo$chromEnd <- hypo$chromStart+10000
+data(UCSC.HG38.Human.CytoBandIdeogram)
+chr.exclude <- NULL
+cyto.info <- UCSC.HG38.Human.CytoBandIdeogram
+tracks.inside <- 2
+tracks.outside <- 0
+RCircos.Set.Core.Components(cyto.info,chr.exclude,tracks.inside,tracks.outside)
+rcircos.params <- RCircos.Get.Plot.Parameters()
+rcircos.cyto <- RCircos.Get.Plot.Ideogram()
+rcircos.position <- RCircos.Get.Plot.Positions()
+RCircos.List.Plot.Parameters()
+RCircos.Set.Plot.Area()
+RCircos.Chromosome.Ideogram.Plot()
+linesHyper <- hyper
+linesHypo <- hypo
+linesHyper$PlotColor <- "red"
+linesHypo <- hypo
+linesHypo$PlotColor <- "blue"
+side <- "in"
+RCircos.Vertical.Line.Plot(line.data=linesHyper,track.num=1,side,is.sorted=FALSE)
+RCircos.Vertical.Line.Plot(line.data=linesHypo,track.num=2,side,is.sorted=FALSE)
