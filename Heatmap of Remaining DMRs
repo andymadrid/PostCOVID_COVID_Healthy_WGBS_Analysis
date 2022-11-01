@@ -1,0 +1,51 @@
+# Make a heat map of net methylation between the groups for the “not recovered” DMRs, using groups means instead
+library(gplots)
+library(RColorBrewer)
+#pal <- brewer.pal(10,"Spectral")
+pal <- colorpanel(100,"blue","yellow","red")
+pc.c <- read.table("dmrs.pc.c.txt",header=T)
+pc.h <- read.table("dmrs.pc.h.txt",header=T)
+c.h <- read.table("dmrs.c.h.txt",header=T)
+pc.c.gr <- with(pc.c,GRanges(chr,IRanges(start,end)))
+pc.h.gr <- with(pc.h,GRanges(chr,IRanges(start,end)))
+c.h.gr <- with(c.h,GRanges(chr,IRanges(start,end)))
+x <- as.data.frame(findOverlaps(c.h.gr,pc.c.gr))
+#c.h.sub <- c.h[x[,1],]
+#pc.c.sub <- pc.c[x[,2],]
+#xx <- cbind(c.h.sub,pc.c.sub)
+#colnames(xx) <- #c(“chr(CvH)","start(CvH)","end(CvH)","length(CvH)","nCG(CvH)","areaStat(CvH)","distanceToTSS(CvH)","ENSEMBL(CvH)","SYMBOL(CvH)","chr(PCvC)","start(PCvC)","end(PCvC)","length(PCvC)","nCG(PCvC)","areaStat(PCvC)","distanceToTSS(PCvC)","ENSEMBL(PCvC)","SYMBOL(PCvC)")
+c.h.only <- subsetByOverlaps(c.h.gr,pc.c.gr,invert=T)
+infile <- list.files(pattern="cov$")
+bs <- read.bismark(files = infile,rmZeroCov=TRUE,strandCollapse=T,verbose=T)
+x <- colnames(bs)
+x <- gsub(".CpG_report.merged_CpG_evidence.cov","",x)
+colnames(bs) <- x
+loci.idx <- which(DelayedMatrixStats::rowSums2(getCoverage(bs, type="Cov")==0) == 0)
+bs.filtered <- bs[loci.idx,]
+cores <- 40
+#bs.filtered.sm <- BSmooth(bs.filtered,BPPARAM=BiocParallel::MulticoreParam(workers = cores))
+methSm <- bsseq::getMeth(bs.filtered,type="raw")
+chrs <- as.data.frame(seqnames(bs.filtered))
+pos <- as.data.frame(start(bs.filtered))
+methWork <- cbind(chrs,pos,as.data.frame(methSm))
+colnames(methWork) <- c("chr","pos",colnames(bs.filtered))
+meth.gr <- with(methWork,GRanges(chr,IRanges(pos,pos+1)))
+dmrs.gr <- c.h.only
+methMean <- c()
+for (i in 1:length(dmrs.gr)) {
+x <- as.data.frame(findOverlaps(meth.gr,dmrs.gr[i]))
+methWork.subset <- methWork[as.numeric(x$queryHits),3:ncol(methWork)]
+methWork.subset <- methWork.subset[,c(1:15,31:45,16:30)]
+#cMean <- mean(colMeans(methWork.subset[,1:15]))
+#pcMean <- mean(colMeans(methWork.subset[,16:30]))
+#hMean <- mean(colMeans(methWork.subset[,31:45]))
+#dmrMean <- cbind(cMean,pcMean,hMean)
+dmrMean <- colMeans(methWork.subset)
+methMean <- rbind(methMean,dmrMean)
+prog <- paste0("Done with DMR ",i,"\n")
+prog <- noquote(prog)
+cat(prog)
+}
+#pdf("heatmap.bseqSmoothed.dmrs.pdf")
+heatmap.2(as.matrix(methMean),col=pal,trace="none",dendrogram="none",labRow=F,key.title=NULL,key.xlab="Methylation Level",density.info="none",Colv=FALSE)
+#dev.off()
