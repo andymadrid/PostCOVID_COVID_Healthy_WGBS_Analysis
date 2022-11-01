@@ -1,0 +1,105 @@
+### WGMS Differential Analysis
+
+# set working directory
+rm(list=ls())
+setwd("/media/Data/AMC_WGBS/Analysis_C_v_PC")
+
+# load pacakges
+library(DSS)
+library(dmrseq)
+library(ChIPseeker)
+library(BiocParallel)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(clusterProfiler)
+library(DOSE)
+library(GenomicRanges)
+library(fdrtool)
+library(ggplot2)
+library(ggfortify)
+library(methylCC)
+library(RColorBrewer)
+library(liftOver)
+library(rtracklayer)
+library(DOSE)
+library(DMRichR)
+library(viridis)
+library(enrichplot)
+library(wesanderson)
+txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+hgAnno <- getAnnot("hg38")
+
+# read in data
+infile <- list.files(pattern="cov$")
+bs <- read.bismark(files = infile,rmZeroCov=TRUE,strandCollapse=T,verbose=T)
+bs <- bs[,1:30] # C v H
+#bs <- bs[,c(31:45,16:30)] # PC v H
+#bs <- bs[,c(31:45,1:15)] # PC v C
+x <- colnames(bs)
+x <- gsub(".CpG_report.merged_CpG_evidence.cov","",x)
+colnames(bs) <- x
+
+# Filter data for only CpGs with at least one read for all samples
+loci.idx <- which(DelayedMatrixStats::rowSums2(getCoverage(bs, type="Cov")==0) == 0)
+bs.filtered <- bs[loci.idx,]
+
+# Add meta data to methylation object
+hAge <- c(40,46,66,68,62,50,25,38,56,54,50,55,51,25,52)
+hSex <- c("M","M","F","M","M","F","F","F","F","M","M","M","F","F","F")
+targets <- read.csv("analysis1_Covid_v_PostCovid.csv",header=T)
+pSex <- targets$Sex[1:15]
+pAge <- targets$Age[16:30]+1
+pPatient <- targets$Patient[1:15]
+cSex <- pSex
+cAge <- pAge-1
+cPatient <- targets$Patient[1:15]
+cAge <- as.data.frame(cAge)
+cSex <- as.data.frame(cSex)
+cPatient <- as.data.frame(cPatient)
+hAge <- as.data.frame(hAge)
+pAge <- as.data.frame(pAge)
+hSex <- as.data.frame(hSex)
+pSex <- as.data.frame(pSex)
+pPatient <- as.data.frame(pPatient)
+cPatient <- as.data.frame(cPatient)
+colnames(hAge) <- "age"
+colnames(pAge) <- "age"
+colnames(cAge) <- "age"
+colnames(hSex) <- "sex"
+colnames(pSex) <- "sex"
+colnames(cSex) <- "sex"
+colnames(pPatient) <- "patient"
+colnames(cPatient) <- "patient"
+pData(bs.filtered)$Condition <- rep(c("COVID","H"),c(15,15))
+#pData(bs.filtered)$Condition <- rep(c("PostCOVID","H"),c(15,15))
+#pData(bs.filtered)$Condition <- rep(c("PostCOVID","COVID"),c(15,15))
+age <- rbind(cAge,hAge)
+sex <- rbind(cSex,hSex)
+#age <- rbind(pAge,cAge)
+#sex <- rbind(pSex,cSex)
+patient <- rbind(pPatient,cPatient)
+pData(bs.filtered)$Replicate <- rep(1:15,times=2)
+pData(bs.filtered)$Age <- age
+pData(bs.filtered)$Sex <- sex
+pData(bs.filtered)$Patient <- patient
+
+# get 10 PCs for analysis
+meth.mat <- bsseq::getMeth(bs.filtered,type="raw")
+pc <- prcomp(meth.mat)
+pc10 <- as.data.frame(pc$rotation[,1:10])
+pData(bs.filtered) <- cbind(pData(bs.filtered),pc10)
+
+# differential analysis with DSS
+metaData <- pData(bs.filtered)
+metaData <- as.data.frame(metaData)
+dmlFit <- DMLfit.multiFactor(bs.filtered,design=metaData,formula= ~ Condition + age + sex + PC1 + PC2,smoothing=TRUE)
+#dmlFit <- DMLfit.multiFactor(bs.filtered,design=metaData,formula= ~ Condition + age + sex + patient + PC1 + PC2,smoothing=TRUE)
+dmlTest <- DMLtest.multiFactor(dmlFit, coef=2)
+#save(bs.filtered,dmlTest,file="dss.c.h.GroupSexAgePC12.rdata")
+#save(bs.filtered,dmlTest,file="dss.pc.h.GroupSexAgePC12.rdata")
+#save(bs.filtered,dmlTest,file="dss.c.pc.GroupSexAgePatientPC12.rdata")
+z <- (dmlTest$stat-mean(dmlTest$stat))/sd(dmlTest$stat)
+x <- fdrtool(z,statistic="normal",plot=F)
+dmlTest$pvals <- x$pval
+dmrs <- callDMR(dmlTest, p.threshold=0.0001,pct.sig=0.99,minCG=10)
+nrow(dmrs)
+
