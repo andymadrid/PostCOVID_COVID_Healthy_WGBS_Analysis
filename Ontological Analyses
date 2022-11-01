@@ -1,0 +1,23 @@
+# Gene ontologies…
+hyper <- dmrs[which(dmrs$areaStat<0 & dmrs$annotation != "Distal Intergenic"),]
+hypo <- dmrs[which(dmrs$areaStat>0 & dmrs$annotation != "Distal Intergenic"),]
+all <- dmrs[which(dmrs$annotation != "Distal Intergenic"),]
+e <- bitr(hyper$SYMBOL,fromType="SYMBOL",toType="ENTREZID",OrgDb="org.Hs.eg.db")
+genesHyper <- e[,2]
+e <- bitr(hypo$SYMBOL,fromType="SYMBOL",toType="ENTREZID",OrgDb="org.Hs.eg.db")
+genesHypo <- e[,2]
+e <- bitr(all$SYMBOL,fromType="SYMBOL",toType="ENTREZID",OrgDb="org.Hs.eg.db")
+genesAll <- e[,2]
+egoHyper <- enrichGO(gene=genesHyper,ont="BP",readable=T,OrgDb="org.Hs.eg.db")
+egoHypo <- enrichGO(gene=genesHypo,ont="BP",readable=T,OrgDb="org.Hs.eg.db")
+egoAll <- enrichGO(gene=genesAll,ont="BP",readable=T,OrgDb="org.Hs.eg.db")
+doAll <- enrichDO(gene=genesAll)
+doHyper <- enrichDO(gene=genesHyper)
+doHypo <- enrichDO(gene=genesHypo)
+keggAll <- enrichKEGG(gene=genesAll,organism="human")
+keggHyper <- enrichKEGG(gene=genesHyper,organism="human")
+keggHypo <- enrichKEGG(gene=genesHypo,organism="human")
+
+egoAll <- simplify(egoAll, cutoff=0.7, by="p.adjust", select_fun=min)
+egoHyper <- simplify(egoHyper, cutoff=0.7, by="p.adjust", select_fun=min)
+egoHypo <- simplify(egoHypo, cutoff=0.7, by="p.adjust", select_fun=min)
