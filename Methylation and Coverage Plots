@@ -1,0 +1,7 @@
+# Make methylation and coverage plots
+pdf("methylDist.pdf")
+plotEmpiricalDistribution(bs, testCovariate=testCovariate,bySample=FALSE)
+dev.off()
+pdf("covDist.pdf")
+plotEmpiricalDistribution(bs, testCovariate=testCovariate,bySample=FALSE,type="Cov")
+dev.off()
