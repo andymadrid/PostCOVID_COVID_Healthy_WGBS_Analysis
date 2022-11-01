@@ -1,0 +1,9 @@
+# Annotate to genes…
+dmrs2 <- with(dmrs,GRanges(chr,IRanges(start,end)))
+peaks <- annotatePeak(dmrs2,tssRegion=c(-2000,2000),TxDb=txdb,annoDb="org.Hs.eg.db")
+peaks
+peaks <- as.data.frame(peaks)
+dmrs2 <- as.data.frame(dmrs2)
+dmrs <- cbind(dmrs,peaks$distanceToTSS,peaks$ENSEMBL,peaks$annotation,peaks$SYMBOL,peaks$GENENAME)
+names(dmrs) <- c(names(dmrs)[1:6],"distanceToTSS","ENSEMBL","annotation","SYMBOL","GENENAME")
+dmrs[which(dmrs$annotation=="Distal Intergenic"),c("ENSEMBL","SYMBOL","GENENAME")] <- NA
