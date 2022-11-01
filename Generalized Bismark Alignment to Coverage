@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+# Align to hg38 genome
+bismark --parallel 5 -p 4 --score_min L,0,-0.3 -X 750 --bowtie2 --path_to_bowtie /path/to/bowtie2/ /WGBS/Human_Genome/hg38/ -1 trimmed_val_1.fq -2 trimmed_val_2.fq
+
+# Deduplicate reads
+deduplicate_bismark -p --bam trimmed_bismark_bt2_pe.bam
+
+# Extract methylation calls
+bismark_methylation_extractor --bedGraph --ignore 3 --ignore_r2 3 --ignore_3prime 3 --ignore_3prime_r2 3 -p --no_overlap --multicore 12 trimmed_bismark_bt2_pe.deduplicated.bam
+
+# Convert coverage to cytosine and merge CpGs across strands
+coverage2cytosine --genome_folder /media/Data/WGBS/Human_Genome/ --merge_CpG -o SampleID trimmed_bismark_bt2_pe.deduplicated.bismark.cov.gz
