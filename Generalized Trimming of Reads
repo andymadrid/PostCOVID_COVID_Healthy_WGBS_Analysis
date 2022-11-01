@@ -1,0 +1,3 @@
+#!/bin/bash
+
+trim_galore --path_to_cutadapt /path/to/cutadapt/ -q 30 --length 30 --paired SampleID_R1.fq SampleID_R2.fq
